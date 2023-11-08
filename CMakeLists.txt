@@ -8,7 +8,7 @@ project(webview-api VERSION 1.0.0)
 
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
-    src/render.cpp
+    src/view.cpp
 )
 
 if (NOT DEFINED ENV{GEODE_SDK})
@@ -21,19 +21,5 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 setup_geode_mod(${PROJECT_NAME})
 
-add_subdirectory(cef)
-
-# ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
-
-# SET_CEF_TARGET_OUT_DIR()
-
-# include_directories(${_CEF_ROOT})
-
-target_link_libraries(${PROJECT_NAME} libcef_dll_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/cef/Release/libcef.lib)
-target_include_directories(${PROJECT_NAME} PRIVATE cef)
-
-# target_link_libraries(${PROJECT_NAME} webview)
-
-add_executable(stupidprocess src/subprocess.cpp)
-target_link_libraries(stupidprocess libcef_dll_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/cef/Release/libcef.lib)
-target_include_directories(stupidprocess PRIVATE cef)
+add_subdirectory(webview)
+target_link_libraries(${PROJECT_NAME} webview ${CMAKE_CURRENT_SOURCE_DIR}/webview/webview2/build/native/x86/WebView2LoaderStatic.lib)
