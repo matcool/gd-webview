@@ -852,15 +852,37 @@ void WebViewImpl::setScalesPageToFit(const bool scalesPageToFit)
     }
 }
 
+CCRect screenNodeBoundingBox(CCNode* node) {
+    auto parent = node->getParent();
+	auto bounding_box = node->boundingBox();
+	CCPoint bb_min(bounding_box.getMinX(), bounding_box.getMinY());
+	CCPoint bb_max(bounding_box.getMaxX(), bounding_box.getMaxY());
+
+	auto min = parent ? parent->convertToWorldSpace(bb_min) : bb_min;
+	auto max = parent ? parent->convertToWorldSpace(bb_max) : bb_max;
+
+    const auto frameSize = CCEGLView::get()->getFrameSize();
+    const auto winSize = CCDirector::get()->getWinSize();
+
+    const auto flipY = [](CCPoint p) {
+        return ccp(p.x, 1.f - p.y);
+    };
+
+    auto frameMin = flipY(min / winSize) * frameSize;
+    auto frameMax = flipY(max / winSize) * frameSize;
+    const auto size = (max - min) / winSize * frameSize;
+    const auto topLeft = ccp(frameMin.x, frameMax.y);
+
+    return CCRect(topLeft, size);
+}
+
 void WebViewImpl::draw()
 {
     if (_createSucceeded)
     {
-        // const auto uiRect = ax::ui::Helper::convertBoundingBoxToScreen(_webView);
-        // _systemWebControl->setWebViewRect(static_cast<int>(uiRect.origin.x), static_cast<int>(uiRect.origin.y),
-        //                                   static_cast<int>(uiRect.size.width), static_cast<int>(uiRect.size.height));
-        const auto size = _webView->getScaledContentSize();
-        const auto origin = ccp(0, 0);
+        const auto bbox = screenNodeBoundingBox(_webView);
+        const auto size = bbox.size;
+        const auto origin = bbox.origin;
         _systemWebControl->setWebViewRect(static_cast<int>(origin.x), static_cast<int>(origin.y),
                                           static_cast<int>(size.width), static_cast<int>(size.height));
     }
@@ -914,6 +936,17 @@ WebView* WebView::create()
     }
     delete webView;
     return nullptr;
+}
+
+bool WebView::init() {
+    if (!CCNode::init()) return false;
+
+    // set a default size, instead of 0, 0
+    this->setContentSize({500, 500});
+
+    this->setAnchorPoint({0.5f, 0.5f});
+
+    return true;
 }
 
 void WebView::setJavascriptInterfaceScheme(std::string_view scheme)

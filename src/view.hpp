@@ -199,6 +199,8 @@ protected:
     ccWebViewCallback _onDidFailLoading                                              = nullptr;
     ccWebViewCallback _onJSCallback                                                  = nullptr;
 
+    bool init() override;
+
 private:
     WebViewImpl* _impl = nullptr;
     friend class WebViewImpl;
