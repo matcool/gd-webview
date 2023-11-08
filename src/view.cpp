@@ -505,7 +505,6 @@ bool Win32WebControl::createWebView(const std::function<bool(std::string_view)>&
 
 		if (!embed(m_window, cb))
 		{
-			// AXLOG("Cannot create edge chromium webview");
 			ret = false;
 			break;
 		}
@@ -581,6 +580,7 @@ void Win32WebControl::loadURL(std::string_view url, bool cleanCachedData)
 
 void Win32WebControl::loadFile(std::string_view filePath)
 {
+	// FIXME:
 	// auto fullPath = ax::FileUtils::getInstance()->fullPathForFilename(filePath);
 	// if (fullPath.find("file:///") != 0)
 	// {
@@ -739,26 +739,124 @@ WebViewImpl::~WebViewImpl()
 //     }
 // }
 
+inline unsigned char nibble2hex(unsigned char c, unsigned char a = 'a')
+{
+    return ((c) < 0xa ? ((c) + '0') : ((c) + a - 10));
+}
+
+inline char* char2hex(char* p, unsigned char c, unsigned char a = 'a')
+{
+    p[0] = nibble2hex(c >> 4, a);
+    p[1] = nibble2hex(c & (uint8_t)0xf, a);
+    return p;
+}
+
+std::string urlEncode(std::string_view s)
+{
+    std::string encoded;
+    if (!s.empty())
+    {
+        encoded.reserve(s.length() * 3 / 2);
+        for (const char c : s)
+        {
+            if (isalnum((uint8_t)c) || c == '-' || c == '_' || c == '.' || c == '~')
+            {
+                encoded.push_back(c);
+            }
+            else
+            {
+                encoded.push_back('%');
+
+                char hex[2];
+                encoded.append(char2hex(hex, c, 'A'), sizeof(hex));
+            }
+        }
+    }
+    return encoded;
+}
+
+inline unsigned char hex2nibble(unsigned char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return c - '0';
+    }
+    else if (c >= 'a' && c <= 'f')
+    {
+        return 10 + (c - 'a');
+    }
+    else if (c >= 'A' && c <= 'F')
+    {
+        return 10 + (c - 'A');
+    }
+    return 0;
+}
+
+inline char hex2char(const char* p)
+{
+    return hex2nibble((uint8_t)p[0]) << 4 | hex2nibble(p[1]);
+}
+
+std::string urlDecode(std::string_view st)
+{
+    std::string decoded;
+    if (!st.empty())
+    {
+        const char* s       = st.data();
+        const size_t length = st.length();
+        decoded.reserve(length * 2 / 3);
+        for (unsigned int i = 0; i < length; ++i)
+        {
+            if (!s[i])
+                break;
+
+            if (s[i] == '%')
+            {
+                decoded.push_back(hex2char(s + i + 1));
+                i = i + 2;
+            }
+            else if (s[i] == '+')
+            {
+                decoded.push_back(' ');
+            }
+            else
+            {
+                decoded.push_back(s[i]);
+            }
+        }
+    }
+    return decoded;
+}
+
+inline std::string htmlFromUri(std::string_view s)
+{
+    if (s.substr(0, 15) == "data:text/html,")
+    {
+        return urlDecode(s.substr(15));
+    }
+    return "";
+}
+
 void WebViewImpl::loadHTMLString(std::string_view string, std::string_view baseURL)
 {
-	// if (_createSucceeded)
-	// {
-	//     if (string.empty())
-	//     {
-	//         _systemWebControl->loadHTMLString("data:text/html," + utils::urlEncode("<html></html>"), baseURL);
-	//         return;
-	//     }
+	if (_createSucceeded)
+	{
+	    if (string.empty())
+	    {
+	        _systemWebControl->loadHTMLString("data:text/html," + urlEncode("<html></html>"), baseURL);
+	        return;
+	    }
 
-	//     const auto html = htmlFromUri(string);
-	//     if (!html.empty())
-	//     {
-	//         _systemWebControl->loadHTMLString("data:text/html," + utils::urlEncode(html), baseURL);
-	//     }
-	//     else
-	//     {
-	//         _systemWebControl->loadHTMLString(string, baseURL);
-	//     }
-	// }
+	    const auto html = htmlFromUri(string);
+	    if (!html.empty())
+	    {
+	        _systemWebControl->loadHTMLString("data:text/html," + urlEncode(html), baseURL);
+	    }
+	    else
+	    {
+	        _systemWebControl->loadHTMLString(string, baseURL);
+	    }
+	}
 }
 
 void WebViewImpl::loadURL(std::string_view url, bool cleanCachedData)
@@ -771,6 +869,7 @@ void WebViewImpl::loadURL(std::string_view url, bool cleanCachedData)
 
 void WebViewImpl::loadFile(std::string_view fileName)
 {
+	// FIXME:
 	// if (_createSucceeded)
 	// {
 	//     const auto fullPath = FileUtils::getInstance()->fullPathForFilename(fileName);
