@@ -21,5 +21,5 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 setup_geode_mod(${PROJECT_NAME})
 
-add_subdirectory(webview)
-target_link_libraries(${PROJECT_NAME} webview ${CMAKE_CURRENT_SOURCE_DIR}/webview/webview2/build/native/x86/WebView2LoaderStatic.lib)
+target_include_directories(${PROJECT_NAME} PRIVATE webview2/build/native/include)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/webview2/build/native/x86/WebView2LoaderStatic.lib)
